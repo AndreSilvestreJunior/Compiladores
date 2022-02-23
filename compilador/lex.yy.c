@@ -498,35 +498,13 @@ int yy_flex_debug = 0;
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
 char *yytext;
-#line 1 "lexica.c"
-#line 2 "lexica.c"
+#line 1 "lexica.l"
+#line 2 "lexica.l"
 #include <stdio.h>
 #include <stdlib.h>
 
-#define TK_INT 1
-#define TK_FLOAT 2
-#define TK_BOOLEAN 3
-#define TK_CHAR 4
-
-#define TK_INT_VALUE 5
-#define TK_FLOAT_VALUE 6
-#define TK_BOOLEAN_VALUE 7
-#define TK_CHAR_VALUE 8
-#define TK_ID 9
-
-#define TK_FOR 11
-#define TK_WHILE 12
-#define TK_IF 13
-#define TK_ELSE 14
-
-#define TK_MAIN 15
-#define TK_FUNCTION 16
-#define TK_OPERATOR 17
-#define TK_CONDITIONAL 18
-#define TK_RETURN 19
-
-#line 529 "lex.yy.c"
-#line 530 "lex.yy.c"
+#line 507 "lex.yy.c"
+#line 508 "lex.yy.c"
 
 #define INITIAL 0
 
@@ -743,10 +721,10 @@ YY_DECL
 		}
 
 	{
-#line 35 "lexica.c"
+#line 13 "lexica.l"
 
 
-#line 750 "lex.yy.c"
+#line 728 "lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -806,115 +784,115 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 /* rule 1 can match eol */
 YY_RULE_SETUP
-#line 37 "lexica.c"
-{return 10;}
+#line 15 "lexica.l"
+{return TK_FIM;}
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 38 "lexica.c"
+#line 16 "lexica.l"
 {}
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 40 "lexica.c"
+#line 18 "lexica.l"
 {return TK_MAIN;}
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 41 "lexica.c"
+#line 19 "lexica.l"
 {return TK_INT;}
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 42 "lexica.c"
+#line 20 "lexica.l"
 {return TK_FLOAT;}
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 43 "lexica.c"
+#line 21 "lexica.l"
 {return TK_BOOLEAN;}
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 44 "lexica.c"
+#line 22 "lexica.l"
 {return TK_CHAR;}
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 45 "lexica.c"
+#line 23 "lexica.l"
 {return TK_FOR;}
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 46 "lexica.c"
+#line 24 "lexica.l"
 {return TK_WHILE;}
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 47 "lexica.c"
+#line 25 "lexica.l"
 {return TK_IF;}
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 48 "lexica.c"
+#line 26 "lexica.l"
 {return TK_ELSE;}
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 49 "lexica.c"
+#line 27 "lexica.l"
 {return TK_FUNCTION;}
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 50 "lexica.c"
+#line 28 "lexica.l"
 {return TK_RETURN;}
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 51 "lexica.c"
+#line 29 "lexica.l"
 {return TK_CONDITIONAL;}
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 52 "lexica.c"
+#line 30 "lexica.l"
 {return TK_OPERATOR;}
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 54 "lexica.c"
-{return TK_INT_VALUE;}
+#line 32 "lexica.l"
+{yylval.traducao = yytext ;return TK_INT_VALUE;}
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 55 "lexica.c"
-{return TK_FLOAT_VALUE;}
+#line 33 "lexica.l"
+{yylval.traducao = yytext ;return TK_FLOAT_VALUE;}
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 56 "lexica.c"
+#line 34 "lexica.l"
 {return TK_BOOLEAN_VALUE;}
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 57 "lexica.c"
+#line 35 "lexica.l"
 {return TK_CHAR_VALUE;}
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 59 "lexica.c"
-{return TK_ID;}
+#line 37 "lexica.l"
+{yylval.label = yytext ;return TK_ID;}
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 61 "lexica.c"
-{ return 100; }
+#line 39 "lexica.l"
+{ return *yytext; }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 63 "lexica.c"
+#line 41 "lexica.l"
 ECHO;
 	YY_BREAK
-#line 918 "lex.yy.c"
+#line 896 "lex.yy.c"
 case YY_STATE_EOF(INITIAL):
 	yyterminate();
 
@@ -1919,20 +1897,5 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 63 "lexica.c"
+#line 41 "lexica.l"
 
-
-void main()
-{
-	int val;
-	while ( (val = yylex()) > 0 ) {
-		if(val == 10)
-		{
-			printf("\n");
-			continue;
-		}
-		printf("%d ",val);		
-	}
-
-	printf("\n");	
-}

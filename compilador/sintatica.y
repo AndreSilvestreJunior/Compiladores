@@ -49,13 +49,56 @@ string gentempcode();
 
 %%
 
-S 			: TK_FUNCTION TK_MAIN '(' ')'
+S 			: TK_FUNCTION TK_MAIN '('PARAMS')' BLOCO
 			{
-				cout << "/*Compilador FOCA*/\n" << "int main()\n{\n}" << endl; 
+				cout << "/*Compilador FOCA*/\n" << "int main(" << $4.traducao << ")" << $6.traducao << endl;
 			}
 			;
 
-%%
+PARAMS 		: PARAMS ',' PARAMS
+			{
+				$$.traducao = $1.traducao + ',' + $3.traducao;
+			}
+			| TK_ID
+			{
+				$$.traducao = $1.label;
+			}
+			|
+			{
+				$$.traducao = "";
+			}
+			;
+
+BLOCO		: '{' COMANDOS '}'
+			{
+				$$.traducao = "{\n" + $2.traducao + "\n}";
+			}
+			|
+			{
+				$$.traducao = "";
+			}
+			;
+
+COMANDOS 	: COMANDO COMANDOS
+			{
+				$$.traducao = $1.traducao + '\n' + $2.traducao;
+			}		
+			|	
+			{
+				$$.traducao = "";
+			}
+			;
+
+COMANDO     : TK_FIM
+			{
+				$$.traducao = "\n";
+			}
+			|
+			{
+				$$.traducao = "";
+			}
+			;
+%%	
 
 #include "lex.yy.c"
 

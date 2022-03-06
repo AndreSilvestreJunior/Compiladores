@@ -16,10 +16,12 @@ ID 			{CHAR}({CHAR}|{INTEIRO})*
 [ \t]		{}
 
 "main"		{return TK_MAIN;}
+
 "int"		{return TK_INT;}
 "float"		{return TK_FLOAT;}
 "boolean"	{return TK_BOOLEAN;}
 "char"		{return TK_CHAR;}
+
 "for"		{return TK_FOR;}
 "while"		{return TK_WHILE;}
 "if"		{return TK_IF;}
@@ -32,7 +34,7 @@ ID 			{CHAR}({CHAR}|{INTEIRO})*
 {INTEIRO}	{yylval.traducao = yytext ;return TK_INT_VALUE;}
 {FLOAT}		{yylval.traducao = yytext ;return TK_FLOAT_VALUE;}
 {BOOLEANO}  {return TK_BOOLEAN_VALUE;}
-{CHAR}		{return TK_CHAR_VALUE;}
+{CHAR}		{yylval.label = yytext ;return TK_CHAR_VALUE;}
 
 {ID}		{yylval.label = yytext ;return TK_ID;}
 

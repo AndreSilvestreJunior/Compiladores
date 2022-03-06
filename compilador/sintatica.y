@@ -2,6 +2,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <map>
 
 #define YYSTYPE atributos
 
@@ -18,6 +19,8 @@ struct atributos
 int yylex(void);
 void yyerror(string);
 string gentempcode();
+void inserir_dado(string key,string value);
+std::map<string,string> mymap;
 %}
 
 %token TK_MAIN
@@ -36,7 +39,7 @@ string gentempcode();
 %token TK_FLOAT_VALUE
 %token TK_BOOLEAN_VALUE
 %token TK_CHAR_VALUE
-%token TK_ID 
+%token TK_ID
 
 %token TK_FOR
 %token TK_WHILE
@@ -71,7 +74,7 @@ PARAMS 		: PARAMS ',' PARAMS
 
 BLOCO		: '{' COMANDOS '}'
 			{
-				$$.traducao = "{\n" + $2.traducao + "\n}";
+				$$.traducao = "{" + $2.traducao + "}";
 			}
 			|
 			{
@@ -81,7 +84,7 @@ BLOCO		: '{' COMANDOS '}'
 
 COMANDOS 	: COMANDO COMANDOS
 			{
-				$$.traducao = $1.traducao + '\n' + $2.traducao;
+				$$.traducao = $1.traducao + $2.traducao;
 			}		
 			|	
 			{
@@ -89,13 +92,41 @@ COMANDOS 	: COMANDO COMANDOS
 			}
 			;
 
-COMANDO     : TK_FIM
+COMANDO     : TK_INT COMANDO
 			{
-				$$.traducao = "\n";
+				inserir_dado($2.traducao,"int");
+				for( std::pair<string,string> it : mymap )
+					cout << it.first << " " << it.second << endl;
 			}
 			|
+			TK_FLOAT COMANDO
 			{
-				$$.traducao = "";
+				inserir_dado($2.traducao,"float");
+				for( std::pair<string,string> it : mymap )
+					cout << it.first << " " << it.second << endl;
+			}
+			|
+			TK_CHAR COMANDO
+			{
+				inserir_dado($2.traducao,"char");
+				for( std::pair<string,string> it : mymap )
+					cout << it.first << " " << it.second << endl;				
+			}
+			|
+			TK_ID
+			{
+				$$.traducao = $1.label;
+			}
+			|
+			TK_CHAR_VALUE
+			{
+				cout << "Sou um token tipo char" << endl;
+				$$.traducao = $1.label;
+			}
+			|
+			TK_FIM
+			{
+				$$.traducao = "\n";
 			}
 			;
 %%	
@@ -109,6 +140,11 @@ string gentempcode()
 	var_temp_qnt++;
 	return "t" + std::to_string(var_temp_qnt);
 }
+
+void inserir_dado(string key, string value){
+	mymap[key] = value;
+}
+
 
 int main(int argc, char* argv[])
 {

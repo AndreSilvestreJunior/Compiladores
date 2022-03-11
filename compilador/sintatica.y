@@ -30,15 +30,10 @@ std::map<string,string> mymap;
 %token TK_RETURN
 %token TK_FIM TK_ERROR
 
-%token TK_INT
-%token TK_FLOAT
-%token TK_BOOLEAN
-%token TK_CHAR
+%token TK_TIPO
 
-%token TK_INT_VALUE
-%token TK_FLOAT_VALUE
-%token TK_BOOLEAN_VALUE
-%token TK_CHAR_VALUE
+%token TK_VALUE
+
 %token TK_ID
 
 %token TK_FOR
@@ -74,7 +69,7 @@ PARAMS 		: PARAMS ',' PARAMS
 
 BLOCO		: '{' COMANDOS '}'
 			{
-				$$.traducao = "{" + $2.traducao + "}";
+				$$.traducao = "{\n" + $2.traducao + "\n}";
 			}
 			|
 			{
@@ -86,50 +81,58 @@ COMANDOS 	: COMANDO COMANDOS
 			{
 				$$.traducao = $1.traducao + $2.traducao;
 			}		
-			|	
+			|
 			{
 				$$.traducao = "";
 			}
 			;
 
-COMANDO     : TK_INT COMANDO
+COMANDO     : TK_TIPO TK_ID
 			{
-				inserir_dado($2.traducao,"int");
-				for( std::pair<string,string> it : mymap )
-					cout << it.first << " " << it.second << endl;
+				$$.traducao = $1.traducao + " " + $2.label;
 			}
 			|
-			TK_FLOAT COMANDO
+			TK_TIPO TK_ID '=' E
 			{
-				inserir_dado($2.traducao,"float");
-				for( std::pair<string,string> it : mymap )
-					cout << it.first << " " << it.second << endl;
+				$$.traducao = $1.label + " " + $2.label + " \n" + $4.traducao;
+			} 
+			;
+
+E 			: E '+' E
+			{
+				$$.label = gentempcode();
+				$$.traducao =  $1.label + "\n" + $$.label + "\n" + $3.traducao + "\n" + $$.label + 
+					" = " + $1.label + " + " + $3.label + ";";
 			}
-			|
-			TK_CHAR COMANDO
+			| E '-' E
 			{
-				inserir_dado($2.traducao,"char");
-				for( std::pair<string,string> it : mymap )
-					cout << it.first << " " << it.second << endl;				
+				$$.label = gentempcode();
+				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + 
+					" = " + $1.label + " - " + $3.label + ";\n";
 			}
-			|
-			TK_ID
+			| E '/' E
 			{
-				$$.traducao = $1.label;
+				$$.label = gentempcode();
+				$$.traducao = $1.traducao + $3.traducao + "\t" + $$.label + 
+					" = " + $1.label + " / " + $3.label + ";\n";
 			}
-			|
-			TK_CHAR_VALUE
+			| E '*' E
 			{
-				cout << "Sou um token tipo char" << endl;
-				$$.traducao = $1.label;
+				$$.label = gentempcode();
+				$$.traducao =  $1.label + "\n" + $$.label + "\n" + $3.traducao + "\n" + $$.label + 
+					" = " + $1.label + " * " + $3.label + ";";				
 			}
-			|
-			TK_FIM
+			| TK_VALUE
 			{
-				$$.traducao = "\n";
+				$$.label = gentempcode();
+				$$.traducao =  $$.label;
+			}
+			| TK_ID
+			{
+				$$.traducao = " " +  $1.label;
 			}
 			;
-%%	
+%%
 
 #include "lex.yy.c"
 

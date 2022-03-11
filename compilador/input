@@ -1,3 +1,4 @@
 function main(var1,var2,var3, var4){
-    int int aux
+    int a
+    a = 1 + 2 * 3
 }

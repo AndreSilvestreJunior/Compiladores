@@ -12,15 +12,12 @@ ID 			{CHAR}({CHAR}|{INTEIRO})*
 
 %%
 
-[\n]		{return TK_FIM;}
+[\n]		{}
 [ \t]		{}
 
 "main"		{return TK_MAIN;}
 
-"int"		{return TK_INT;}
-"float"		{return TK_FLOAT;}
-"boolean"	{return TK_BOOLEAN;}
-"char"		{return TK_CHAR;}
+("int"|"float"|"boolean"|"char")    {yylval.label = yytext ;return TK_TIPO;}
 
 "for"		{return TK_FOR;}
 "while"		{return TK_WHILE;}
@@ -29,12 +26,9 @@ ID 			{CHAR}({CHAR}|{INTEIRO})*
 "function"	{return TK_FUNCTION;}
 "return"	{return TK_RETURN;}
 ("<"|"<="|">"|">=")	{return TK_CONDITIONAL;}
-("+"|"-"|"*"|"/"|"++"|"--"|"+="|"-=") {return TK_OPERATOR;}
+("+"|"-"|"*"|"/"|"++"|"--"|"+="|"-=") {return *yytext;}
 
-{INTEIRO}	{yylval.traducao = yytext ;return TK_INT_VALUE;}
-{FLOAT}		{yylval.traducao = yytext ;return TK_FLOAT_VALUE;}
-{BOOLEANO}  {return TK_BOOLEAN_VALUE;}
-{CHAR}		{yylval.label = yytext ;return TK_CHAR_VALUE;}
+({INTEIRO}|{FLOAT}|{BOOLEANO}|'{CHAR}')	{yylval.traducao = yytext ;return TK_VALUE;}
 
 {ID}		{yylval.label = yytext ;return TK_ID;}
 

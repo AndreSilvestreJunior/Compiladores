@@ -12,7 +12,7 @@ ID 			{CHAR}({CHAR}|{INTEIRO})*
 
 %%
 
-[\n]		{}
+[\n]		{return TK_FIM;}
 [ \t]		{}
 
 "main"		{return TK_MAIN;}
@@ -25,10 +25,15 @@ ID 			{CHAR}({CHAR}|{INTEIRO})*
 "else"		{return TK_ELSE;}
 "function"	{return TK_FUNCTION;}
 "return"	{return TK_RETURN;}
-("<"|"<="|">"|">=")	{return TK_CONDITIONAL;}
-("+"|"-"|"*"|"/"|"++"|"--"|"+="|"-=") {return *yytext;}
 
-({INTEIRO}|{FLOAT}|{BOOLEANO}|'{CHAR}')	{yylval.traducao = yytext ;return TK_VALUE;}
+("+"|"-"|"*"|"/"|"++"|"--"|"+="|"-=") {return *yytext;}
+("<"|"<="|">"|">=")	{return TK_CONDITIONAL;}
+("!"|"|"|"&")     { return *yytext; }
+
+{INTEIRO}   {yylval.traducao = yytext ;return TK_INT_VALUE;}
+{FLOAT}     {yylval.traducao = yytext ;return TK_FLOAT_VALUE;}
+{BOOLEANO}  {yylval.traducao = yytext ;return TK_BOOLEANO_VALUE;}
+'{CHAR}'	{yylval.traducao = yytext ;return TK_CHAR_VALUE;}
 
 {ID}		{yylval.label = yytext ;return TK_ID;}
 

@@ -34,7 +34,7 @@ std::map<string,string> hash_id;
 %token TK_MAIN
 %token TK_FUNCTION
 %token TK_OPERATOR
-%token TK_CONDITIONAL
+%token TK_RELACIONAL
 %token TK_RETURN
 %token TK_FIM TK_ERROR
 
@@ -66,7 +66,7 @@ std::map<string,string> hash_id;
 %%
 S 			: TK_FUNCTION TK_MAIN '('PARAMS')' BLOCO
 			{
-				cout << "/*Compilador FOCA*/\n" << "int main(" << $4.traducao << ")" << $6.traducao << endl;
+				cout << "/*Compilador Mongoloide*/\n" << "int main(" << $4.traducao << ")" << $6.traducao << endl;
 			}
 			;
 
@@ -148,6 +148,12 @@ COMANDOS 	: COMANDO COMANDOS
 
 COMANDO     : TK_TIPO TK_ID TK_FIM
 			{
+				std::map<string,string>::iterator it;
+				
+				it = hash_id.find($2.label);
+				if( it != hash_id.end()) 
+					yyerror("ERROR - Variaveis com mesmo ID declaradas!");					
+
 				while ($$.declaracoes.size() != 0)
 					$$.declaracoes.pop();
 				
@@ -163,6 +169,9 @@ COMANDO     : TK_TIPO TK_ID TK_FIM
 			}
 			| TK_TIPO TK_ID '=' E TK_FIM
 			{
+				if($1.label == "char")
+					yyerror("Operacao invalida!");
+
 				while ($$.declaracoes.size() != 0)
 					$$.declaracoes.pop();
 				
@@ -183,12 +192,34 @@ COMANDO     : TK_TIPO TK_ID TK_FIM
 
 				$$.label = gentempcode();
 				inserir_id($2.label, $$.label);
+				inserir_tipo($$.label, $1.label);
+
+				string temporaria = $$.label;
+				string tipo = $1.label;
+				
+				string tipo_exp = hash_tipo[$4.label];
+				string conversao = "";				
+
+				if(tipo == "int" && tipo_exp == "float")
+					conversao += "(int)";
+
+				else if(tipo == "float" && tipo_exp == "int")
+					conversao += "(float)";
+				
+				else if(tipo == "bool" && tipo_exp != "bool")
+					conversao += "(bool)";				
 
 				$$.declaracoes.push($1.label + " " + $$.label + "; #" + $2.label + "\n");
-				$$.comandos.push($$.label + " = " + $4.label + ";\n");
+				$$.comandos.push($$.label + " = " + conversao + $4.label + ";\n");
 			}
 			| TK_ID '=' E TK_FIM
 			{
+				std::map<string,string>::iterator it;
+				
+				it = hash_id.find($1.label);
+				if( it == hash_id.end()) 
+					yyerror("Variavel '" + $1.label + "' não foi declarada!");
+
 				while ($$.declaracoes.size() != 0)
 					$$.declaracoes.pop();
 				
@@ -220,6 +251,9 @@ COMANDO     : TK_TIPO TK_ID TK_FIM
 
 				else if(tipo == "float" && tipo_exp == "int")
 					conversao += "(float)";
+				
+				else if(tipo == "bool" && tipo_exp != "bool")
+					conversao += "(bool)";
 
 				$$.comandos.push(temporaria + " = " + conversao + $3.label + ";\n");
 			}
@@ -281,6 +315,8 @@ E 			: E '+' E
 				else if (tipoExp1 == "float" && tipoExp2 == "float" ){					
 					$$.tipo = "float";
 				}
+				else if(tipoExp1 == "char" || tipoExp2 == "char")
+					yyerror("Operacao invalida!");		
 
 				inserir_tipo($$.label,$$.tipo);
 				
@@ -336,6 +372,8 @@ E 			: E '+' E
 
 					$$.tipo = "float";
 				}
+				else if(tipoExp1 == "char" || tipoExp2 == "char")
+					yyerror("Operacao invalida!");
 
 				inserir_tipo($$.label,$$.tipo);
 				
@@ -391,6 +429,8 @@ E 			: E '+' E
 
 					$$.tipo = "float";
 				}
+				else if(tipoExp1 == "char" || tipoExp2 == "char")
+					yyerror("Operacao invalida!");
 
 				inserir_tipo($$.label,$$.tipo);
 				
@@ -446,6 +486,8 @@ E 			: E '+' E
 
 					$$.tipo = "float";
 				}
+				else if(tipoExp1 == "char" || tipoExp2 == "char")
+					yyerror("Operacao invalida!");
 
 				inserir_tipo($$.label,$$.tipo);
 				
@@ -453,7 +495,10 @@ E 			: E '+' E
 				$$.comandos.push($$.label +	" = " + $1.label + " * " + $3.label + ";");
 			}
 			| '!' E
-			{		
+			{	
+				if($2.label != "bool")
+					yyerror("Operacao invalida!");					
+
 				while ($$.declaracoes.size() != 0)
 					$$.declaracoes.pop();
 
@@ -482,6 +527,9 @@ E 			: E '+' E
 			}
 			| E '&''&' E
 			{
+				if($2.label != "bool")
+					yyerror("Operacao invalida!");	
+
 				while ($$.declaracoes.size() != 0)
 					$$.declaracoes.pop();
 
@@ -522,6 +570,9 @@ E 			: E '+' E
 			}					
 			| E '|''|' E
 			{
+				if($2.label != "bool")
+					yyerror("Operacao invalida!");	
+
 				while ($$.declaracoes.size() != 0)
 					$$.declaracoes.pop();
 
@@ -559,6 +610,44 @@ E 			: E '+' E
 
 				$$.declaracoes.push($$.tipo + " " + $$.label + ";");
 				$$.comandos.push($$.label +	" = " + $1.label + " || " + $4.label + ";");	
+			}
+			| E TK_RELACIONAL E
+			{
+				while ($$.declaracoes.size() != 0)
+					$$.declaracoes.pop();
+
+				while ($$.comandos.size() != 0)
+					$$.comandos.pop();
+				
+				while ($1.declaracoes.size() != 0)
+				{
+					$$.declaracoes.push($1.declaracoes.front());
+					$1.declaracoes.pop();
+				}
+
+				while ($1.comandos.size() != 0)
+				{
+					$$.comandos.push($1.comandos.front());
+					$1.comandos.pop();
+				}
+
+				while ($3.declaracoes.size() != 0)
+				{
+					$$.declaracoes.push($3.declaracoes.front());
+					$3.declaracoes.pop();
+				}
+
+				while ($3.comandos.size() != 0)
+				{
+					$$.comandos.push($3.comandos.front());
+					$3.comandos.pop();
+				}
+
+				$$.label = gentempcode();
+				inserir_tipo($$.label,"bool");
+
+				$$.declaracoes.push("bool " + $$.label + ";");
+				$$.comandos.push($$.label + " = " + $1.label + " " + $2.label + " " + $3.label + ";");
 			}
 			| '(' TK_TIPO ')' E
 			{
@@ -620,7 +709,7 @@ E 			: E '+' E
 				inserir_tipo($$.label,"float");
 			}		
 			| TK_BOOLEANO_VALUE
-			{
+			{				
 				$$.label = gentempcode();
 				
 				while ($$.declaracoes.size() != 0)
@@ -629,21 +718,36 @@ E 			: E '+' E
 				while ($$.comandos.size() != 0)
 					$$.comandos.pop();
 
-				$$.declaracoes.push("boolean " + $$.label + "; #" + $1.traducao);
+				$$.declaracoes.push("bool " + $$.label + "; #" + $1.traducao);
 				$$.comandos.push($$.label + " = " + $1.traducao + ";");
 
-				inserir_tipo($$.label,"boolean");
-			}			
+				inserir_tipo($$.label,"bool");
+			}		
+			| TK_CHAR_VALUE
+			{
+				$$.label = gentempcode();
+				
+				while ($$.declaracoes.size() != 0)
+					$$.declaracoes.pop();
+
+				while ($$.comandos.size() != 0)
+					$$.comandos.pop();
+
+				$$.declaracoes.push("char " + $$.label + "; #" + $1.traducao);
+				$$.comandos.push($$.label + " = " + $1.traducao + ";");
+
+				inserir_tipo($$.label,"char");
+			}	
 			| TK_ID
 			{
 				std::map<string,string>::iterator it;
 				string temporaria;
 				
-				hash_id.find($1.label);
+				it = hash_id.find($1.label);
 				if( it != hash_id.end()) 
 					temporaria = hash_id[$1.label];
 				else
-					yyerror("Variavel nao foi declarada!");
+					yyerror("Variavel '" + $1.label + "' não foi declarada!");
 
 				$$.label = temporaria;
 			}				

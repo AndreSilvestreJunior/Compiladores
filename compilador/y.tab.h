@@ -48,7 +48,7 @@ extern int yydebug;
     TK_MAIN = 258,
     TK_FUNCTION = 259,
     TK_OPERATOR = 260,
-    TK_CONDITIONAL = 261,
+    TK_RELACIONAL = 261,
     TK_RETURN = 262,
     TK_FIM = 263,
     TK_ERROR = 264,
@@ -73,7 +73,7 @@ extern int yydebug;
 #define TK_MAIN 258
 #define TK_FUNCTION 259
 #define TK_OPERATOR 260
-#define TK_CONDITIONAL 261
+#define TK_RELACIONAL 261
 #define TK_RETURN 262
 #define TK_FIM 263
 #define TK_ERROR 264

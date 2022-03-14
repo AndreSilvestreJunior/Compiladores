@@ -17,7 +17,7 @@ ID 			{CHAR}({CHAR}|{INTEIRO})*
 
 "main"		{return TK_MAIN;}
 
-("int"|"float"|"boolean"|"char")    {yylval.label = yytext ;return TK_TIPO;}
+("int"|"float"|"bool"|"char")    {yylval.label = yytext ;return TK_TIPO;}
 
 "for"		{return TK_FOR;}
 "while"		{return TK_WHILE;}
@@ -27,7 +27,7 @@ ID 			{CHAR}({CHAR}|{INTEIRO})*
 "return"	{return TK_RETURN;}
 
 ("+"|"-"|"*"|"/"|"++"|"--"|"+="|"-=") {return *yytext;}
-("<"|"<="|">"|">=")	{return TK_CONDITIONAL;}
+("<"|"<="|">"|">="|"==")	{yylval.label = yytext; return TK_RELACIONAL;}
 ("!"|"|"|"&")     { return *yytext; }
 
 {INTEIRO}   {yylval.traducao = yytext ;return TK_INT_VALUE;}

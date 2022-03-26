@@ -62,11 +62,13 @@ extern int yydebug;
     TK_FLOAT_VALUE = 272,
     TK_CHAR_VALUE = 273,
     TK_BOOLEANO_VALUE = 274,
-    TK_OPLOGICO = 275,
-    TK_FOR = 276,
-    TK_WHILE = 277,
-    TK_IF = 278,
-    TK_ELSE = 279
+    TK_NEGACAO = 275,
+    TK_OR = 276,
+    TK_AND = 277,
+    TK_FOR = 278,
+    TK_WHILE = 279,
+    TK_IF = 280,
+    TK_ELSE = 281
   };
 #endif
 /* Tokens.  */
@@ -87,11 +89,13 @@ extern int yydebug;
 #define TK_FLOAT_VALUE 272
 #define TK_CHAR_VALUE 273
 #define TK_BOOLEANO_VALUE 274
-#define TK_OPLOGICO 275
-#define TK_FOR 276
-#define TK_WHILE 277
-#define TK_IF 278
-#define TK_ELSE 279
+#define TK_NEGACAO 275
+#define TK_OR 276
+#define TK_AND 277
+#define TK_FOR 278
+#define TK_WHILE 279
+#define TK_IF 280
+#define TK_ELSE 281
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED

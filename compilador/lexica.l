@@ -28,7 +28,10 @@ ID 			{CHAR}({CHAR}|{INTEIRO})*
 
 ("+"|"-"|"*"|"/"|"++"|"--"|"+="|"-=") {return *yytext;}
 ("<"|"<="|">"|">="|"==")	{yylval.label = yytext; return TK_RELACIONAL;}
-("!"|"|"|"&")     { return *yytext; }
+
+"!"     { return TK_NEGACAO; }
+"||"    { return TK_OR; }
+"&&"    { return TK_AND; }
 
 {INTEIRO}   {yylval.traducao = yytext ;return TK_INT_VALUE;}
 {FLOAT}     {yylval.traducao = yytext ;return TK_FLOAT_VALUE;}

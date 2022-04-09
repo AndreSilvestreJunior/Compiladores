@@ -28,6 +28,7 @@ struct atributos
 int yylex(void);
 void yyerror(string);
 string gentempcode();
+string gentemplabel();
 void inserir_tipo(string temp,string tipo, int pos);
 void inserir_id(string id,string temp, int pos);
 void clear_queue(std::queue<string> *fila);
@@ -37,6 +38,8 @@ string temp_id(string id);
 std::vector< std::map<string,string> > hashs_id;
 std::vector< std::map<string,string> > hashs_tipo;
 int count_block = 0;
+
+std::vector< string > loop_stack;
 
 %}
 
@@ -94,8 +97,7 @@ S 			: COMANDOS
 					$1.comandos.pop();
 				}
 			}
-			;
-			
+			;			
 
 PARAMS 		: PARAMS ',' PARAMS
 			{
@@ -227,10 +229,59 @@ COMANDO     : TK_FUNCTION TK_MAIN '('PARAMS')'
 
 				$$.comandos.push(temporaria + " = " + conversao + $3.label + ";\n");
 			}
+			| TK_IF '('E')'
+			{
+				clear_queue( &($$.declaracoes) );
+				clear_queue( &($$.comandos) );
+
+				switch_queue(&($$.declaracoes), &($3.declaracoes));
+				switch_queue(&($$.comandos), &($3.comandos));
+
+				$$.label = gentempcode();
+				string label = gentemplabel();
+				loop_stack.push_back(label);
+
+				$$.declaracoes.push("bool " + $$.label + ";");
+				$$.comandos.push($$.label + " = !" + $3.label + ";");
+
+				$$.comandos.push("if(" + $$.label + ") goto " + label + ";");
+			}
+			| TK_ELSE '('E')'
+			{
+				clear_queue( &($$.declaracoes) );
+				clear_queue( &($$.comandos) );
+
+				switch_queue(&($$.declaracoes), &($3.declaracoes));
+				switch_queue(&($$.comandos), &($3.comandos));
+
+				$$.comandos.push("else(!" + $3.label + ')');
+				$$.comandos.push("\tgoto labelif;");
+			}
+			| TK_WHILE '('E')'
+			{
+				clear_queue( &($$.declaracoes) );
+				clear_queue( &($$.comandos) );
+
+				switch_queue(&($$.declaracoes), &($3.declaracoes));
+				switch_queue(&($$.comandos), &($3.comandos));
+
+				$$.comandos.push("while(!" + $3.label + ')');
+				$$.comandos.push("\tgoto labelif;");
+			}
+			| TK_FOR '('E')'
+			{
+				clear_queue( &($$.declaracoes) );
+				clear_queue( &($$.comandos) );
+
+				switch_queue(&($$.declaracoes), &($3.declaracoes));
+				switch_queue(&($$.comandos), &($3.comandos));
+
+				$$.comandos.push("for(!" + $3.label + ')');
+				$$.comandos.push("\tgoto labelif;");
+			}
 			| '{'
 			{
 				clear_queue(&($$.declaracoes));
-				$$.comandos.push("{");
 
 				std::map <string,string> aux_tipo;
 				std::map <string,string> aux_id;
@@ -243,8 +294,13 @@ COMANDO     : TK_FUNCTION TK_MAIN '('PARAMS')'
 			| '}'
 			{
 				clear_queue(&($$.declaracoes));
+				clear_queue(&($$.comandos));
 
-				$$.comandos.push("}");
+				if(!loop_stack.empty())
+				{
+					$$.comandos.push("label " + loop_stack.back() + ";");
+					loop_stack.pop_back();
+				}
 
 				hashs_id.pop_back();
 				hashs_tipo.pop_back();
@@ -402,6 +458,16 @@ E 			: E '+' E
 				
 				$$.declaracoes.push($$.tipo + " " + $$.label + ";");
 				$$.comandos.push($$.label +	" = " + $1.label + " * " + $3.label + ";");
+			}
+			| '(' E ')'
+			{
+				clear_queue(&($$.declaracoes));
+				clear_queue(&($$.comandos));
+
+				switch_queue(&($$.declaracoes),&($2.declaracoes));
+				switch_queue(&($$.comandos),&($2.comandos));
+
+				$$.label = $2.label;
 			}
 			| TK_NEGACAO E
 			{	
@@ -571,6 +637,13 @@ string gentempcode()
 	return "t" + std::to_string(var_temp_qnt);
 }
 
+string gentemplabel()
+{
+	static int qnt = 1;
+	
+	return "label" + std::to_string(qnt++);
+}
+
 void inserir_tipo(string temp, string tipo, int pos){
 	hashs_tipo[pos][temp] = tipo;
 }
@@ -592,7 +665,6 @@ string temp_id(string id){
 
 	yyerror("ERROR - Variavel " + id + " nao foi declarada!");
 }
-
 
 int main(int argc, char* argv[])
 {

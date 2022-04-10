@@ -54,21 +54,24 @@ extern int yydebug;
     TK_ERROR = 264,
     TK_TIPO = 265,
     TK_ID = 266,
-    TK_INT = 267,
-    TK_FLOAT = 268,
-    TK_CHAR = 269,
-    TK_BOOLEANO = 270,
-    TK_INT_VALUE = 271,
-    TK_FLOAT_VALUE = 272,
-    TK_CHAR_VALUE = 273,
-    TK_BOOLEANO_VALUE = 274,
-    TK_NEGACAO = 275,
-    TK_OR = 276,
-    TK_AND = 277,
-    TK_FOR = 278,
-    TK_WHILE = 279,
-    TK_IF = 280,
-    TK_ELSE = 281
+    TK_CIN = 267,
+    TK_COUT = 268,
+    TK_INT = 269,
+    TK_FLOAT = 270,
+    TK_CHAR = 271,
+    TK_BOOLEANO = 272,
+    TK_INT_VALUE = 273,
+    TK_FLOAT_VALUE = 274,
+    TK_CHAR_VALUE = 275,
+    TK_STRING_VALUE = 276,
+    TK_BOOLEANO_VALUE = 277,
+    TK_NEGACAO = 278,
+    TK_OR = 279,
+    TK_AND = 280,
+    TK_FOR = 281,
+    TK_WHILE = 282,
+    TK_IF = 283,
+    TK_ELSE = 284
   };
 #endif
 /* Tokens.  */
@@ -81,21 +84,24 @@ extern int yydebug;
 #define TK_ERROR 264
 #define TK_TIPO 265
 #define TK_ID 266
-#define TK_INT 267
-#define TK_FLOAT 268
-#define TK_CHAR 269
-#define TK_BOOLEANO 270
-#define TK_INT_VALUE 271
-#define TK_FLOAT_VALUE 272
-#define TK_CHAR_VALUE 273
-#define TK_BOOLEANO_VALUE 274
-#define TK_NEGACAO 275
-#define TK_OR 276
-#define TK_AND 277
-#define TK_FOR 278
-#define TK_WHILE 279
-#define TK_IF 280
-#define TK_ELSE 281
+#define TK_CIN 267
+#define TK_COUT 268
+#define TK_INT 269
+#define TK_FLOAT 270
+#define TK_CHAR 271
+#define TK_BOOLEANO 272
+#define TK_INT_VALUE 273
+#define TK_FLOAT_VALUE 274
+#define TK_CHAR_VALUE 275
+#define TK_STRING_VALUE 276
+#define TK_BOOLEANO_VALUE 277
+#define TK_NEGACAO 278
+#define TK_OR 279
+#define TK_AND 280
+#define TK_FOR 281
+#define TK_WHILE 282
+#define TK_IF 283
+#define TK_ELSE 284
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED

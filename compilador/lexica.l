@@ -9,6 +9,8 @@ INTEIRO		[0-9]+
 FLOAT		{INTEIRO}*"."{INTEIRO}+
 BOOLEANO	("True"|"False")
 ID 			{CHAR}({CHAR}|{INTEIRO})*
+ASPAS       ["]
+STRING      {ASPAS}.*{ASPAS}
 
 %%
 
@@ -26,6 +28,9 @@ ID 			{CHAR}({CHAR}|{INTEIRO})*
 "function"	{return TK_FUNCTION;}
 "return"	{return TK_RETURN;}
 
+"scan"       {return TK_CIN;}
+"print"      {return TK_COUT;}
+
 ("+"|"-"|"*"|"/"|"++"|"--"|"+="|"-=") {return *yytext;}
 ("<"|"<="|">"|">="|"==")	{yylval.label = yytext; return TK_RELACIONAL;}
 
@@ -37,6 +42,7 @@ ID 			{CHAR}({CHAR}|{INTEIRO})*
 {FLOAT}     {yylval.traducao = yytext ;return TK_FLOAT_VALUE;}
 {BOOLEANO}  {yylval.traducao = yytext ;return TK_BOOLEANO_VALUE;}
 '{CHAR}'	{yylval.traducao = yytext ;return TK_CHAR_VALUE;}
+{STRING}    {yylval.traducao = yytext ;return TK_STRING_VALUE;}
 
 {ID}		{yylval.label = yytext ;return TK_ID;}
 

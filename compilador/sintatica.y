@@ -76,6 +76,7 @@ std::vector< string > loop_stack;
 %token TK_WHILE
 %token TK_IF
 %token TK_ELSE
+%token TK_DO
 
 %start S
 
@@ -175,6 +176,7 @@ COMANDO     : TK_FUNCTION TK_MAIN '('PARAMS')'
 			}
 			| TK_ID '=' E
 			{
+				$$.label = $3.label;
 				string temporaria = temp_id($1.label);
 				string tipo = hashs_tipo[count_block][temporaria];
 				
@@ -209,14 +211,38 @@ COMANDO     : TK_FUNCTION TK_MAIN '('PARAMS')'
 			}
 			| TK_WHILE '('E')'
 			{
-				comandos[count_block].push("while(!" + $3.label + ')');
-				comandos[count_block].push("\tgoto labelif;");
+				$$.label = gentempcode();				
+				string label_ini = gentemplabel();
+				string label_fim = gentemplabel();
+				std::queue< string > aux_queue;
+
+				while(!comandos[count_block].empty())
+				{
+					string str = comandos[count_block].front();
+
+					if( str.find($3.label) != -1 )
+					{
+						aux_queue.push("label " + label_ini );
+					}
+
+					aux_queue.push(str);
+					comandos[count_block].pop();
+				}
+
+				comandos[count_block] = aux_queue;
+
+				declaracoes[count_block].push("bool " + $$.label + ";");
+				comandos[count_block].push($$.label + " = !" + $3.label + ";");
+				comandos[count_block].push("if(" + $$.label + ") goto " + label_fim + ";");
+
+				loop_stack.push_back( "goto " + label_ini + ";" + "label " + label_fim);
 			}
 			| TK_FOR '(' COMANDO ';' E ';' COMANDO ')'
 			{	
 				std::queue< string > aux_queue;
 				string label_ini = gentemplabel();
 				string label_fim = gentemplabel();
+				string cmd = "";
 
 				while(!comandos[count_block].empty())
 				{
@@ -225,6 +251,18 @@ COMANDO     : TK_FUNCTION TK_MAIN '('PARAMS')'
 					if( str.find($5.label) != -1 )
 					{
 						aux_queue.push("label " + label_ini );
+					}
+
+					else if( str.find($7.label) != -1 )
+					{
+						cmd += str;
+						comandos[count_block].pop();
+
+						str = comandos[count_block].front();
+						cmd += str;
+						comandos[count_block].pop();
+
+						continue;
 					}
 
 					aux_queue.push(str);
@@ -239,7 +277,7 @@ COMANDO     : TK_FUNCTION TK_MAIN '('PARAMS')'
 				comandos[count_block].push(temp + " = " + "!" + $5.label + ";");								
 				comandos[count_block].push("if(" + temp + ") goto " + label_fim + ";" );			
 				
-				loop_stack.push_back( "goto " + label_ini + ";" + "label " + label_fim);				
+				loop_stack.push_back( cmd + "goto " + label_ini + ";" + "label " + label_fim);				
 			}
 			| '{'
 			{
@@ -256,8 +294,6 @@ COMANDO     : TK_FUNCTION TK_MAIN '('PARAMS')'
 				comandos.push_back(aux_comandos);
 
 				count_block += 1;
-
-				declaracoes[count_block].push("\n");
 			}
 			| '}'
 			{
@@ -281,8 +317,6 @@ COMANDO     : TK_FUNCTION TK_MAIN '('PARAMS')'
 				hashs_id.pop_back();
 				hashs_tipo.pop_back();
 				count_block -= 1;
-
-				comandos[count_block].push("\n");
 			}
 			| TK_FIM
 			{

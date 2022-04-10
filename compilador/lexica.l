@@ -25,6 +25,7 @@ STRING      {ASPAS}.*{ASPAS}
 "while"		{return TK_WHILE;}
 "if"		{return TK_IF;}
 "else"		{return TK_ELSE;}
+"do"        {return TK_DO;}
 "function"	{return TK_FUNCTION;}
 "return"	{return TK_RETURN;}
 

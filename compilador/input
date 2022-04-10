@@ -1,5 +1,4 @@
-int i
-if (1 < 2)
-{
-    int a
+do{
+    
 }
+while ( 1 > 2)

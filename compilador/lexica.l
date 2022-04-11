@@ -19,15 +19,19 @@ STRING      {ASPAS}.*{ASPAS}
 
 "main"		{return TK_MAIN;}
 
-("int"|"float"|"bool"|"char")    {yylval.label = yytext ;return TK_TIPO;}
+("int"|"float"|"bool"|"char"|"string")    {yylval.label = yytext ;return TK_TIPO;}
 
 "for"		{return TK_FOR;}
 "while"		{return TK_WHILE;}
 "if"		{return TK_IF;}
 "else"		{return TK_ELSE;}
 "do"        {return TK_DO;}
+"switch"    {return TK_SWITCH;}
+"case"      {return TK_CASE;}
 "function"	{return TK_FUNCTION;}
 "return"	{return TK_RETURN;}
+"break"     {return TK_BREAK;}
+"continue"  {return TK_CONTINUE;}
 
 "scan"       {return TK_CIN;}
 "print"      {return TK_COUT;}

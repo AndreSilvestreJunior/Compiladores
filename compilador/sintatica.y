@@ -41,6 +41,10 @@ std::vector< std::map<string,string> > hashs_tipo;
 int count_block = 0;
 
 std::vector< string > loop_stack;
+std::vector< string > loop_ends;
+std::vector< string > loop_starts;
+
+string switch_value = "";
 
 %}
 
@@ -60,6 +64,7 @@ std::vector< string > loop_stack;
 %token TK_INT
 %token TK_FLOAT
 %token TK_CHAR
+%token TK_STRING
 %token TK_BOOLEANO
 
 %token TK_INT_VALUE
@@ -77,6 +82,10 @@ std::vector< string > loop_stack;
 %token TK_IF
 %token TK_ELSE
 %token TK_DO
+%token TK_SWITCH
+%token TK_CASE
+%token TK_BREAK
+%token TK_CONTINUE
 
 %start S
 
@@ -87,7 +96,7 @@ std::vector< string > loop_stack;
 
 %%
 
-S 			: COMANDOS
+S 			: TESTE
 			{
 				cout << "/*Compilador NoMakeSense*/\n" << endl;
 
@@ -119,12 +128,190 @@ PARAMS 		: PARAMS ',' PARAMS
 			}
 			;
 
+TESTE		: COMANDOS TESTE
+			| CONDICINAIS TESTE
+			| LOOPS TESTE
+			|
+			{
+			}
+			;
+
 COMANDOS 	: COMANDO COMANDOS
 			|
 			{
 				
 				$$.traducao = "";
 			}		
+			;
+
+CONDICINAIS : TK_IF '('E')'
+			{
+				$$.label = gentempcode();
+				string label = gentemplabel();
+				loop_stack.push_back("label " + label);
+
+				declaracoes[count_block].push("bool " + $$.label + ";");
+				comandos[count_block].push($$.label + " = !" + $3.label + ";");
+				comandos[count_block].push("if(" + $$.label + ") goto " + label + ";");
+			}
+			| TK_ELSE
+			{
+				$$.label = gentempcode();	
+				string label_fim = gentemplabel();			
+				std::queue< string > aux_queue;
+
+				while(!comandos[count_block].empty())
+				{
+					string str = comandos[count_block].front();
+
+					if( str.find("label ") != -1 )
+					{
+						aux_queue.push("goto " + label_fim );
+					}
+
+					aux_queue.push(str);
+					comandos[count_block].pop();
+				}
+
+				comandos[count_block] = aux_queue;
+
+				loop_stack.push_back("label " + label_fim);
+			}
+			| TK_SWITCH '(' E ')'
+			{
+				string label = gentemplabel();
+				switch_value = $3.label;
+				loop_stack.push_back("label " + label);
+				loop_ends.push_back(label);
+			}
+			| TK_CASE E
+			{
+				$$.label = gentempcode();
+
+				if(switch_value == "" )
+					yyerror("Nenhum switch foi iniciado!");
+
+				declaracoes[count_block].push("bool " + $$.label + ";");
+				comandos[count_block].push($$.label + " = " + "(" + switch_value + " == " + $2.label + ")" );
+
+				string label_aux = gentempcode();
+				declaracoes[count_block].push("bool " + label_aux + ";");				
+				comandos[count_block].push(label_aux + " = !" + $$.label);
+
+				string label = gentemplabel();
+				comandos[count_block].push("if(" + label_aux + ")" + "goto " + label + ";");
+				loop_stack.push_back("label " + label);
+			}
+			;
+			
+LOOPS		: TK_DO COMANDOS TK_WHILE '('E')'
+			{
+				$$.label = gentempcode();				
+				string label_ini = gentemplabel();
+				string label_fim = gentemplabel();
+				std::queue< string > aux_queue;
+
+				aux_queue.push("label " + label_ini);
+
+				while(!comandos[count_block].empty())
+				{
+					string str = comandos[count_block].front();
+
+					if(str.find("break") != -1)
+					{
+						aux_queue.push("goto " + label_fim + ";");
+					}
+					else if (str.find("continue") != -1)
+					{
+						aux_queue.push("goto " + label_ini + ";");
+					}
+					else
+						aux_queue.push(str);
+
+					comandos[count_block].pop();
+				}
+
+				comandos[count_block] = aux_queue;
+
+				declaracoes[count_block].push("bool " + $$.label + ";");
+				comandos[count_block].push($$.label + " = " + $5.label + ";");
+				comandos[count_block].push("if(" + $$.label + ") goto " + label_ini + ";");
+				comandos[count_block].push("label " + label_fim + ";");
+			}			
+			| TK_WHILE '('E')'
+			{
+				$$.label = gentempcode();				
+				string label_ini = gentemplabel();
+				string label_fim = gentemplabel();
+				std::queue< string > aux_queue;
+
+				while(!comandos[count_block].empty())
+				{
+					string str = comandos[count_block].front();
+
+					if( str.find($3.label) != -1 )
+					{
+						aux_queue.push("label " + label_ini );
+					}
+
+					aux_queue.push(str);
+					comandos[count_block].pop();
+				}
+
+				comandos[count_block] = aux_queue;
+
+				declaracoes[count_block].push("bool " + $$.label + ";");
+				comandos[count_block].push($$.label + " = !" + $3.label + ";");
+				comandos[count_block].push("if(" + $$.label + ") goto " + label_fim + ";");
+
+				loop_stack.push_back( "goto " + label_ini + ";" + "label " + label_fim);
+				loop_ends.push_back(label_fim);
+				loop_starts.push_back(label_ini);
+			}			
+			| TK_FOR '(' COMANDO ';' E ';' COMANDO ')'
+			{	
+				std::queue< string > aux_queue;
+				string label_ini = gentemplabel();
+				string label_fim = gentemplabel();
+				string cmd = "";
+
+				while(!comandos[count_block].empty())
+				{
+					string str = comandos[count_block].front();
+
+					if( str.find($5.label) != -1 )
+					{
+						aux_queue.push("label " + label_ini );
+					}
+
+					else if( str.find($7.label) != -1 )
+					{
+						cmd += str;
+						comandos[count_block].pop();
+
+						str = comandos[count_block].front();
+						cmd += str;
+						comandos[count_block].pop();
+
+						continue;
+					}
+
+					aux_queue.push(str);
+					comandos[count_block].pop();
+				}
+
+				comandos[count_block] = aux_queue;
+
+				string temp = gentempcode();
+				declaracoes[count_block].push("bool " + temp + ";");
+				
+				comandos[count_block].push(temp + " = " + "!" + $5.label + ";");								
+				comandos[count_block].push("if(" + temp + ") goto " + label_fim + ";" );			
+				
+				loop_stack.push_back( cmd + "goto " + label_ini + ";" + "label " + label_fim);				
+				loop_ends.push_back(label_fim);
+				loop_starts.push_back(label_ini);
+			}
 			;
 
 COMANDO     : TK_FUNCTION TK_MAIN '('PARAMS')'
@@ -194,90 +381,27 @@ COMANDO     : TK_FUNCTION TK_MAIN '('PARAMS')'
 
 				comandos[count_block].push(temporaria + " = " + conversao + $3.label + ";");
 			}
-			| TK_IF '('E')'
+			| TK_BREAK
 			{
-				$$.label = gentempcode();
-				string label = gentemplabel();
-				loop_stack.push_back("label " + label);
+				if(loop_ends.empty())
+					comandos[count_block].push("break");
 
-				declaracoes[count_block].push("bool " + $$.label + ";");
-				comandos[count_block].push($$.label + " = !" + $3.label + ";");
-				comandos[count_block].push("if(" + $$.label + ") goto " + label + ";");
-			}
-			| TK_ELSE '('E')'
-			{
-				comandos[count_block].push("else(!" + $3.label + ')');
-				comandos[count_block].push("\tgoto labelif;");
-			}
-			| TK_WHILE '('E')'
-			{
-				$$.label = gentempcode();				
-				string label_ini = gentemplabel();
-				string label_fim = gentemplabel();
-				std::queue< string > aux_queue;
-
-				while(!comandos[count_block].empty())
+				else
 				{
-					string str = comandos[count_block].front();
-
-					if( str.find($3.label) != -1 )
-					{
-						aux_queue.push("label " + label_ini );
-					}
-
-					aux_queue.push(str);
-					comandos[count_block].pop();
+					string str = loop_ends.back();
+					comandos[count_block].push("goto " + str + ";");
 				}
-
-				comandos[count_block] = aux_queue;
-
-				declaracoes[count_block].push("bool " + $$.label + ";");
-				comandos[count_block].push($$.label + " = !" + $3.label + ";");
-				comandos[count_block].push("if(" + $$.label + ") goto " + label_fim + ";");
-
-				loop_stack.push_back( "goto " + label_ini + ";" + "label " + label_fim);
 			}
-			| TK_FOR '(' COMANDO ';' E ';' COMANDO ')'
-			{	
-				std::queue< string > aux_queue;
-				string label_ini = gentemplabel();
-				string label_fim = gentemplabel();
-				string cmd = "";
-
-				while(!comandos[count_block].empty())
+			| TK_CONTINUE
+			{
+				if(loop_starts.empty())
+					comandos[count_block].push("continue");
+				
+				else
 				{
-					string str = comandos[count_block].front();
-
-					if( str.find($5.label) != -1 )
-					{
-						aux_queue.push("label " + label_ini );
-					}
-
-					else if( str.find($7.label) != -1 )
-					{
-						cmd += str;
-						comandos[count_block].pop();
-
-						str = comandos[count_block].front();
-						cmd += str;
-						comandos[count_block].pop();
-
-						continue;
-					}
-
-					aux_queue.push(str);
-					comandos[count_block].pop();
-				}
-
-				comandos[count_block] = aux_queue;
-
-				string temp = gentempcode();
-				declaracoes[count_block].push("bool " + temp + ";");
-				
-				comandos[count_block].push(temp + " = " + "!" + $5.label + ";");								
-				comandos[count_block].push("if(" + temp + ") goto " + label_fim + ";" );			
-				
-				loop_stack.push_back( cmd + "goto " + label_ini + ";" + "label " + label_fim);				
+					string str = loop_starts.back();
+					comandos[count_block].push("goto " + str + ";");
+				}				
 			}
 			| '{'
 			{
@@ -322,9 +446,9 @@ COMANDO     : TK_FUNCTION TK_MAIN '('PARAMS')'
 			{
 				$$.traducao = "";
 			}
-			| TK_COUT '('TK_STRING_VALUE')'
+			| TK_COUT '('E')'
 			{
-				comandos[count_block].push("cout << " + $3.traducao + " << endl;");
+				comandos[count_block].push("cout << " + $3.label + " << endl;");
 			}
 			| TK_ID '=' TK_CIN '('')'
 			{
@@ -344,14 +468,20 @@ E 			: E '+' E
 				$$.tipo = "int";
 
 				if ( tipoExp1 == "int" && tipoExp2 == "float" ){
-					$1.label = "(float)" + $1.label;
+					string temp_aux = gentempcode();
+					declaracoes[count_block].push("float " + temp_aux + ";");
+					comandos[count_block].push( temp_aux + " = " + "(float)" + $1.label + ";");
 
-					$$.tipo = "float";
+					$1.label = temp_aux;					
+					inserir_tipo(temp_aux,"float",count_block);
 				}
 				else if (tipoExp1 == "float" && tipoExp2 == "int" ){
-					$2.label = "(float)" + $2.label;
+					string temp_aux = gentempcode();
+					declaracoes[count_block].push("float " + temp_aux + ";");
+					comandos[count_block].push( temp_aux + " = " + "(float)" + $3.label + ";");
 
-					$$.tipo = "float";
+					$3.label = temp_aux;					
+					inserir_tipo(temp_aux,"float",count_block);
 				}
 				else if (tipoExp1 == "float" && tipoExp2 == "float" ){					
 					$$.tipo = "float";
@@ -374,14 +504,20 @@ E 			: E '+' E
 				$$.tipo = "int";
 
 				if ( tipoExp1 == "int" && tipoExp2 == "float" ){
-					$1.label = "(float)" + $1.label;
+					string temp_aux = gentempcode();
+					declaracoes[count_block].push("float " + temp_aux + ";");
+					comandos[count_block].push( temp_aux + " = " + "(float)" + $1.label + ";");
 
-					$$.tipo = "float";
+					$1.label = temp_aux;					
+					inserir_tipo(temp_aux,"float",count_block);
 				}
 				else if (tipoExp1 == "float" && tipoExp2 == "int" ){
-					$2.label = "(float)" + $2.label;
+					string temp_aux = gentempcode();
+					declaracoes[count_block].push("float " + temp_aux + ";");
+					comandos[count_block].push( temp_aux + " = " + "(float)" + $3.label + ";");
 
-					$$.tipo = "float";
+					$3.label = temp_aux;					
+					inserir_tipo(temp_aux,"float",count_block);
 				}
 				else if(tipoExp1 == "char" || tipoExp2 == "char")
 					yyerror("Operacao invalida!");
@@ -401,14 +537,20 @@ E 			: E '+' E
 				$$.tipo = "int";
 
 				if ( tipoExp1 == "int" && tipoExp2 == "float" ){
-					$1.label = "(float)" + $1.label;
+					string temp_aux = gentempcode();
+					declaracoes[count_block].push("float " + temp_aux + ";");
+					comandos[count_block].push( temp_aux + " = " + "(float)" + $1.label + ";");
 
-					$$.tipo = "float";
+					$1.label = temp_aux;					
+					inserir_tipo(temp_aux,"float",count_block);
 				}
 				else if (tipoExp1 == "float" && tipoExp2 == "int" ){
-					$2.label = "(float)" + $2.label;
+					string temp_aux = gentempcode();
+					declaracoes[count_block].push("float " + temp_aux + ";");
+					comandos[count_block].push( temp_aux + " = " + "(float)" + $3.label + ";");
 
-					$$.tipo = "float";
+					$3.label = temp_aux;					
+					inserir_tipo(temp_aux,"float",count_block);
 				}
 				else if(tipoExp1 == "char" || tipoExp2 == "char")
 					yyerror("Operacao invalida!");
@@ -428,14 +570,20 @@ E 			: E '+' E
 				$$.tipo = "int";
 
 				if ( tipoExp1 == "int" && tipoExp2 == "float" ){
-					$1.label = "(float)" + $1.label;
+					string temp_aux = gentempcode();
+					declaracoes[count_block].push("float " + temp_aux + ";");
+					comandos[count_block].push( temp_aux + " = " + "(float)" + $1.label + ";");
 
-					$$.tipo = "float";
+					$1.label = temp_aux;					
+					inserir_tipo(temp_aux,"float",count_block);
 				}
 				else if (tipoExp1 == "float" && tipoExp2 == "int" ){
-					$2.label = "(float)" + $2.label;
+					string temp_aux = gentempcode();
+					declaracoes[count_block].push("float " + temp_aux + ";");
+					comandos[count_block].push( temp_aux + " = " + "(float)" + $3.label + ";");
 
-					$$.tipo = "float";
+					$3.label = temp_aux;					
+					inserir_tipo(temp_aux,"float",count_block);
 				}
 				else if(tipoExp1 == "char" || tipoExp2 == "char")
 					yyerror("Operacao invalida!");
@@ -508,6 +656,21 @@ E 			: E '+' E
 				declaracoes[count_block].push($2.label + " " + $$.label + ";");
 				comandos[count_block].push($$.label + " = (" + $2.label + ")" + $4.label);
 			}
+			| TK_ID '['TK_INT_VALUE']'
+			{
+				string tem_index = gentempcode();
+				
+				string temp = temp_id($1.label);
+
+				declaracoes[count_block].push("int " + tem_index + "; #" + $3.traducao);
+				comandos[count_block].push(tem_index + " = " + $3.traducao + ";");
+
+				inserir_tipo($$.label,"int",count_block);
+
+				$$.label = gentempcode();
+				declaracoes[count_block].push("char " + $$.label + ";");
+				comandos[count_block].push($$.label + " = " + temp + "[" + tem_index + "];");
+			}
 			| TK_INT_VALUE
 			{
 				$$.label = gentempcode();
@@ -544,6 +707,15 @@ E 			: E '+' E
 				comandos[count_block].push($$.label + " = " + $1.traducao + ";");
 
 				inserir_tipo($$.label,"char",count_block);
+			}
+			| TK_STRING_VALUE
+			{
+				$$.label = gentempcode();
+
+				declaracoes[count_block].push("string " + $$.label + "; #" + $1.traducao);
+				comandos[count_block].push($$.label + " = " + $1.traducao + ";");
+
+				inserir_tipo($$.label, "string", count_block);
 			}	
 			| TK_ID
 			{

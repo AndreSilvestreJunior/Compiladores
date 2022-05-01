@@ -28,6 +28,10 @@ void yyerror(string);
 string gentempcode();
 string gentemplabel();
 string temp_id(string id);
+string tipo_id(string id);
+string search_declaration(std::queue<string> fila, string temp);
+void preprocess();
+void preprocess_func();
 void clear_queue(std::queue<string> *fila);
 void inserir_id(string id,string temp, int pos);
 void inserir_tipo(string temp,string tipo, int pos);
@@ -36,9 +40,18 @@ void switch_queue( std::queue<string> *destino, std::queue<string> *origem );
 std::vector< std::queue<string> > declaracoes;
 std::vector< std::queue<string> > comandos;
 
+bool is_main = False;
+
+string functions = "";
+
 std::vector< std::map<string,string> > hashs_id;
 std::vector< std::map<string,string> > hashs_tipo;
 int count_block = 0;
+
+std::map<string,string> func_tipos;
+std::map< string, std::queue<string> > func_dec;
+std::map< string, std::queue<string> > func_op;
+string current_func = "";
 
 std::vector< string > loop_stack;
 std::vector< string > loop_ends;
@@ -87,6 +100,9 @@ string switch_value = "";
 %token TK_BREAK
 %token TK_CONTINUE
 
+%token TK_UNARIO
+%token TK_COMPOSTO
+
 %start S
 
 %left '+' '-'
@@ -101,8 +117,68 @@ S 			: TESTE
 				cout << "#include <iostream>\n" << endl;
 				cout << "#define True 1;" << endl;
 				cout << "#define False 0;\n" << endl;
-				cout << "using namespace std;" << endl;
-				cout << "\nint main(){\n" << endl;
+				cout << "using namespace std;" << endl;	
+
+				preprocess_func();
+				preprocess();
+			
+
+				for( std::pair<string, std::queue<string> > it : func_dec )
+				{
+					string name = it.first;
+					std::queue<string> fila_dec = it.second;
+
+					cout << fila_dec.front() << ";" << endl;
+				}
+
+				cout << endl;
+
+				for( std::pair<string, std::queue<string> > it : func_dec )
+				{
+					string name = it.first;
+					std::queue<string> fila_dec = it.second;
+
+					cout << fila_dec.front() << "\n";
+					fila_dec.pop();
+
+					while(!fila_dec.empty())
+					{						
+						if(fila_dec.front() != "{")
+							cout << "\t";
+
+						cout << fila_dec.front() << "\n";
+						fila_dec.pop();
+					}
+
+					std::queue<string> fila_op = func_op[name];
+
+					while(!fila_op.empty())
+					{
+						string str =  fila_op.front();
+						if( str.find("funcao") != -1 )
+						{
+							vector<string> result;
+				    		boost::split(result, str, boost::is_any_of(" "));
+
+							std::map<string,std::queue<string>>::iterator it;
+							it = func_dec.find(result[1]);
+							if( it == func_dec.end()) 
+								yyerror("Funcao " + result[1] + " nao foi declarada!");
+							
+							fila_op.pop();
+							continue;
+						}						
+
+						if(str != "}")
+							cout << "\t";						
+						
+						cout << str << "\n";						
+						
+						fila_op.pop();
+					}
+				}
+				
+				cout << "\nint main()\n{" << endl;
 
 				while(!declaracoes[0].empty())
 				{
@@ -112,19 +188,43 @@ S 			: TESTE
 
 				while(!comandos[0].empty())
 				{
-					cout << "\t" << comandos[0].front() << "\n";
+					string str =  comandos[0].front();
+					if( str.find("funcao") != -1 )
+					{
+						vector<string> result;
+						boost::split(result, str, boost::is_any_of(" "));
+
+						std::map<string,std::queue<string>>::iterator it;
+						it = func_dec.find(result[1]);
+						if( it == func_dec.end()) 
+							yyerror("Funcao " + result[1] + " nao foi declarada!");
+						
+						comandos[0].pop();
+						continue;
+					}										
+
+					cout << "\t" << str << "\n";
 					comandos[0].pop();
 				}
 
 				cout << "}\n" << endl;
 			}
-			;			
+			;
 
 PARAMS 		: PARAMS ',' PARAMS
 			{
 				$$.traducao = $1.traducao + ',' + $3.traducao;
 			}
-			| TK_ID
+			| TK_TIPO TK_ID
+			{
+				$$.label = gentempcode();		
+				
+				inserir_id($2.label,$$.label,count_block);
+				inserir_tipo($$.label,$1.label, count_block);
+
+				$$.traducao = $1.label + " " + $$.label;
+			}
+			| E
 			{
 				$$.traducao = $1.label;
 			}
@@ -281,7 +381,7 @@ LOOPS		: TK_DO COMANDOS TK_WHILE '('E')'
 
 				std::queue< string > aux_queue;
 				string label_ini = gentemplabel();
-				string label_fim = gentemplabel();
+				string label_fim = gentemplabel() + ":";
 				
 				string label_inter = gentemplabel();
 				string cmd = label_inter + ":;";
@@ -333,13 +433,23 @@ LOOPS		: TK_DO COMANDOS TK_WHILE '('E')'
 			}
 			;
 
-COMANDO     : TK_FUNCTION TK_MAIN '('PARAMS')'
+COMANDO     : TK_FUNCTION TK_ID '('PARAMS')'
 			{
-				if(!count_block)
-					comandos[0].push("int main(" + $4.traducao + ")");
-				
-				else
-					yyerror("Fução main declarada incorretamente!");
+				std::queue <string> aux;
+				std::queue <string> aux2;
+
+				func_dec[$2.label] = aux;
+				func_op[$2.label] = aux2;
+
+				func_dec[$2.label].push("\nvoid " + $2.label + "(" + $4.traducao +  ")");
+
+				current_func = $2.label;
+
+				func_tipos[current_func] = "void";
+			}
+			| TK_FUNCTION TK_MAIN '('PARAMS')'
+			{
+				is_main = True;
 			}
 			| TK_TIPO TK_ID
 			{
@@ -374,6 +484,33 @@ COMANDO     : TK_FUNCTION TK_MAIN '('PARAMS')'
 				}			
 
 				declaracoes[count_block].push($1.label + " " + $$.label + "; //" + $2.label);
+			}
+			| TK_TIPO TK_ID '[' TK_INT_VALUE ']'
+			{
+				std::map<string,string>::iterator it;
+				
+				it = hashs_id[count_block].find($2.label);
+				if( it != hashs_id[count_block].end()) 
+					yyerror("ERROR - Variaveis com mesmo ID declaradas!");					
+
+				$$.label = gentempcode();		
+				
+				inserir_id($2.label,$$.label,count_block);
+				inserir_tipo($$.label,$1.label, count_block);
+
+				int tamanho = stoi($4.traducao);
+
+				declaracoes[count_block].push($1.label + " " + $$.label + "[" + $4.traducao + "]" + ";");
+
+				string inicial_val;
+
+				if ($1.label == "int")
+					inicial_val = "0"; 
+
+				for(int i = 0; i < tamanho; i++)
+				{
+					comandos[count_block].push($$.label + "[" + to_string(i) + "] = " + inicial_val + ";");
+				}
 			}
 			| TK_TIPO TK_ID '=' E
 			{
@@ -424,6 +561,76 @@ COMANDO     : TK_FUNCTION TK_MAIN '('PARAMS')'
 
 				comandos[count_block].push(temporaria + " = " + conversao + $3.label + ";");
 			}
+			| TK_ID '[' TK_INT_VALUE ']' '=' E
+			{
+				string temp = temp_id($1.label);
+
+				comandos[count_block].push(temp + "[" + $3.traducao + "] = " + $6.label + ";");
+			}
+			| TK_ID '=' TK_ID '(' PARAMS ')'
+			{
+				string temp = temp_id($1.label);
+
+				std::map<string,std::queue<string>>::iterator it;
+				
+				it = func_dec.find($3.label);
+				if( it == func_dec.end())					
+					comandos[count_block].push("funcao " + $3.label);		
+
+				comandos[count_block].push(temp + " = " + $3.label + "(" + $5.traducao + ");" );
+			}
+			| TK_ID '(' PARAMS ')'
+			{
+				std::map<string,std::queue<string>>::iterator it;
+				
+				it = func_dec.find($1.label);
+				if( it == func_dec.end()) 
+					comandos[count_block].push("funcao " + $1.label);							
+
+				comandos[count_block].push($1.label + "(" + $3.traducao + ");" );
+			}
+			| TK_RETURN E
+			{
+				string temp = $2.label;
+				string tipo = tipo_id(temp);
+
+				if(!is_main)
+				{
+					func_dec[current_func].front().replace(0,5,tipo);
+					func_tipos[current_func] = tipo;
+				}
+
+				comandos[count_block].push("return " + temp + ";");
+			}
+			| TK_ID TK_COMPOSTO E
+			{
+				string temp = temp_id($1.label);
+				string op = $2.label;
+				
+				$$.label = gentempcode();
+				declaracoes[count_block].push("int " + $$.label + ";");
+				
+				if( op == "+=")
+				{
+					comandos[count_block].push($$.label + " = " + temp + " + " + $3.label + ";");
+					comandos[count_block].push(temp + " = " + $$.label + ";");					
+				}
+				else if(op == "-=")
+				{
+					comandos[count_block].push($$.label + " = " + temp + " - " + $3.label + ";");
+					comandos[count_block].push(temp + " = " + $$.label + ";");	
+				}
+				else if(op == "*=")
+				{
+					comandos[count_block].push($$.label + " = " + temp + " * " + $3.label + ";");
+					comandos[count_block].push(temp + " = " + $$.label + ";");	
+				}
+				else if(op == "/=")
+				{
+					comandos[count_block].push($$.label + " = " + temp + " / " + $3.label + ";");
+					comandos[count_block].push(temp + " = " + $$.label + ";");	
+				}
+			}
 			| TK_BREAK
 			{
 				if(loop_ends.empty())
@@ -465,8 +672,34 @@ COMANDO     : TK_FUNCTION TK_MAIN '('PARAMS')'
 			| '}'
 			{
 				int bloco_anterior = count_block - 1;
-				switch_queue(&(declaracoes[bloco_anterior]), &(declaracoes[count_block]));
-				switch_queue(&(comandos[bloco_anterior]), &(comandos[count_block]));
+				
+				if(is_main){
+					switch_queue(&(declaracoes[bloco_anterior]), &(declaracoes[count_block]));
+					switch_queue(&(comandos[bloco_anterior]), &(comandos[count_block]));
+
+					if(!bloco_anterior)
+						is_main = False;
+				}
+
+				else{
+					func_dec[current_func].push("{");
+
+					while(!declaracoes[count_block].empty())
+					{
+						string str = declaracoes[count_block].front();
+						func_dec[current_func].push(str);
+						declaracoes[count_block].pop();
+					}
+
+					while(!comandos[count_block].empty())
+					{
+						string str = comandos[count_block].front();
+						func_op[current_func].push(str);
+						comandos[count_block].pop();
+					}
+
+					func_op[current_func].push("}");
+				}
 
 				if(!loop_stack.empty())
 				{
@@ -476,7 +709,10 @@ COMANDO     : TK_FUNCTION TK_MAIN '('PARAMS')'
 				    boost::split(result, str, boost::is_any_of(";"));
  
     				for (int i = 0; i < result.size(); i++)
-        				comandos[bloco_anterior].push(result[i] + ";");
+						if(result[i].find("label"))
+							comandos[bloco_anterior].push(result[i]);
+        				else
+							comandos[bloco_anterior].push(result[i] + ";");
 
 					loop_stack.pop_back();
 				}
@@ -498,7 +734,7 @@ COMANDO     : TK_FUNCTION TK_MAIN '('PARAMS')'
 				string temp = temp_id($1.label);				
 			
 				comandos[count_block].push("cin >> " + temp + ";");				
-			}			
+			}		
 			;
 
 E 			: E '+' E
@@ -575,25 +811,9 @@ E 			: E '+' E
 				string tipoExp1 = hashs_tipo[count_block][$1.label];
 				string tipoExp2 = hashs_tipo[count_block][$3.label];
 
-				$$.tipo = "int";
+				$$.tipo = "float";
 
-				if ( tipoExp1 == "int" && tipoExp2 == "float" ){
-					string temp_aux = gentempcode();
-					declaracoes[count_block].push("float " + temp_aux + ";");
-					comandos[count_block].push( temp_aux + " = " + "(float)" + $1.label + ";");
-
-					$1.label = temp_aux;					
-					inserir_tipo(temp_aux,"float",count_block);
-				}
-				else if (tipoExp1 == "float" && tipoExp2 == "int" ){
-					string temp_aux = gentempcode();
-					declaracoes[count_block].push("float " + temp_aux + ";");
-					comandos[count_block].push( temp_aux + " = " + "(float)" + $3.label + ";");
-
-					$3.label = temp_aux;					
-					inserir_tipo(temp_aux,"float",count_block);
-				}
-				else if(tipoExp1 == "char" || tipoExp2 == "char")
+				if(tipoExp1 == "char" || tipoExp2 == "char")
 					yyerror("Operacao invalida!");
 
 				$$.label = gentempcode();
@@ -639,6 +859,16 @@ E 			: E '+' E
 			| '(' E ')'
 			{
 				$$.label = $2.label;
+			}
+			| '-' E
+			{
+				$$.label = gentempcode();
+				string aux = gentempcode();
+
+				declaracoes[count_block].push("int " + aux + ";");
+
+				comandos[count_block].push(aux + " = " + "-1;");
+				comandos[count_block].push($$.label + " = " + $2.label + " * " + aux + ";");
 			}
 			| TK_NEGACAO E
 			{	
@@ -704,6 +934,7 @@ E 			: E '+' E
 				string tem_index = gentempcode();
 				
 				string temp = temp_id($1.label);
+				string tipo = hashs_tipo[count_block][temp];
 
 				declaracoes[count_block].push("int " + tem_index + "; #" + $3.traducao);
 				comandos[count_block].push(tem_index + " = " + $3.traducao + ";");
@@ -711,7 +942,7 @@ E 			: E '+' E
 				inserir_tipo($$.label,"int",count_block);
 
 				$$.label = gentempcode();
-				declaracoes[count_block].push("char " + $$.label + ";");
+				declaracoes[count_block].push(tipo + $$.label + ";");
 				comandos[count_block].push($$.label + " = " + temp + "[" + tem_index + "];");
 			}
 			| TK_INT_VALUE
@@ -764,8 +995,7 @@ E 			: E '+' E
 				{
 					string str = $$.label + "[" + to_string(i-1) + "] = '" + $1.traducao[i] + "';";
 					comandos[count_block].push(str);
-				}    
-    
+				}     
 			}	
 			| TK_ID
 			{
@@ -817,6 +1047,20 @@ string temp_id(string id){
 	yyerror("ERROR - Variavel " + id + " nao foi declarada!");
 }
 
+string tipo_id(string id){
+	std::map<string,string>::iterator it;
+
+	for(int i = count_block; i >= 0 ; i--)
+	{
+		it = hashs_tipo[i].find(id);
+
+		if( it != hashs_tipo[i].end()) 
+			return it->second;
+	}
+
+	yyerror("ERROR - Tipo da variavel " + id + " nao foi declarada!");
+}
+
 int main(int argc, char* argv[])
 {
 	var_temp_qnt = 0;
@@ -858,4 +1102,143 @@ void switch_queue( std::queue<string> *destino, std::queue<string> *origem )
 			destino->push(origem->front());
 			origem->pop();
 		}				
+}
+
+void preprocess()
+{
+	std::queue<string> new_cmds;
+	std:queue<string> dlcs = declaracoes[0];
+
+	while(!comandos[0].empty())
+	{
+		string str = comandos[0].front();
+
+		if(str.find("(") != -1){
+			
+			std::vector<string> result;
+			boost::split(result, str, boost::is_any_of("("));
+			if(result.size() > 1)
+			{
+				string temp;
+				string funcao;
+
+				vector<string> result2;
+				boost::split(result2, result[0], boost::is_any_of(" "));
+
+				temp = result2[0];
+				funcao = result2[2];				
+
+				string tipo_func = func_tipos[funcao];
+				string tipo_temp;
+
+				while(!dlcs.empty())
+				{
+					string str = dlcs.front();
+
+					if(str.find(temp) != -1)
+					{
+						vector<string> result;
+						boost::split(result, str, boost::is_any_of(" "));
+
+						tipo_temp = result[0];
+						break;
+					}
+
+					dlcs.pop();
+				}
+
+				if(tipo_temp != tipo_func)
+				{
+					string label = gentempcode();
+					string label2 = gentempcode();
+					declaracoes[0].push(tipo_temp + " " + label + ";");
+					declaracoes[0].push(tipo_func + " " + label2 + ";");
+					
+					new_cmds.push(label2 + " = " + funcao + "(" + result[result.size()-1]);
+					new_cmds.push(label + " = (" + tipo_temp + ")" + label2 + ";");
+					new_cmds.push(temp + " = " + label + ";");
+					comandos[0].pop();
+					continue;
+				}
+			}
+
+		}
+
+		new_cmds.push(str);
+		comandos[0].pop();
+	}
+
+	comandos[0] = new_cmds;
+}
+
+void preprocess_func()
+{
+	for( std::pair<string, std::queue<string> > it : func_op )
+	{
+		std::queue<string> new_cmds;
+		std::queue<string> cmds = it.second;
+
+		std:queue<string> dlcs = func_dec[it.first];
+
+		while(!cmds.empty())
+		{
+			string str = cmds.front();
+
+			if(str.find("(") != -1){
+				
+				std::vector<string> result;
+				boost::split(result, str, boost::is_any_of("("));
+				if(result.size() > 1)
+				{
+					string temp;
+					string funcao;
+
+					vector<string> result2;
+					boost::split(result2, result[0], boost::is_any_of(" "));
+
+					temp = result2[0];
+					funcao = result2[2];				
+
+					string tipo_func = func_tipos[funcao];
+					string tipo_temp;
+
+					while(!dlcs.empty())
+					{
+						string str = dlcs.front();
+
+						if(str.find(temp) != -1)
+						{
+							vector<string> result;
+							boost::split(result, str, boost::is_any_of(" "));
+
+							tipo_temp = result[0];
+							break;
+						}
+
+						dlcs.pop();
+					}
+
+					if(tipo_temp != tipo_func)
+					{
+						string label = gentempcode();
+						string label2 = gentempcode();
+						func_dec[it.first].push(tipo_temp + " " + label + ";");
+						func_dec[it.first].push(tipo_func + " " + label2 + ";");
+						
+						new_cmds.push(label2 + " = " + funcao + "(" + result[result.size()-1]);
+						new_cmds.push(label + " = (" + tipo_temp + ")" + label2 + ";");
+						new_cmds.push(temp + " = " + label + ";");
+						cmds.pop();
+						continue;
+					}
+				}
+
+			}
+
+			new_cmds.push(str);
+			cmds.pop();
+		}
+
+		func_op[it.first] = new_cmds;
+	}	
 }

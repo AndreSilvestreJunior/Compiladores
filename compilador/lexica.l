@@ -36,7 +36,8 @@ STRING      {ASPAS}.*{ASPAS}
 "scan"       {return TK_CIN;}
 "print"      {return TK_COUT;}
 
-("+"|"-"|"*"|"/"|"++"|"--"|"+="|"-=") {return *yytext;}
+("+"|"-"|"*"|"/") {return *yytext;}
+("+="|"-="|"*="|"/=") { yylval.label = yytext; return TK_COMPOSTO; }
 ("<"|"<="|">"|">="|"==")	{yylval.label = yytext; return TK_RELACIONAL;}
 
 "!"     { return TK_NEGACAO; }

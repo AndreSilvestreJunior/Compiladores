@@ -1,2 +1,22 @@
-string a = "brin"
-print(a)
+function main()
+{
+    int a[5]
+    int b
+
+    b = f2(10,1.0)
+}
+
+function f1(int p1, float p2)
+{
+    int a
+    a = 10
+    int b
+    b = f2(2)
+    return a
+}
+
+function f2(float p1)
+{
+    p1 *= 10
+    return p1
+}

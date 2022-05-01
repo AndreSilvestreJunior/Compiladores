@@ -77,7 +77,9 @@ extern int yydebug;
     TK_SWITCH = 287,
     TK_CASE = 288,
     TK_BREAK = 289,
-    TK_CONTINUE = 290
+    TK_CONTINUE = 290,
+    TK_UNARIO = 291,
+    TK_COMPOSTO = 292
   };
 #endif
 /* Tokens.  */
@@ -114,6 +116,8 @@ extern int yydebug;
 #define TK_CASE 288
 #define TK_BREAK 289
 #define TK_CONTINUE 290
+#define TK_UNARIO 291
+#define TK_COMPOSTO 292
 
 /* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
